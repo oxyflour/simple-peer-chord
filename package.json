@@ -1,0 +1,20 @@
+{
+  "name": "simple-peer-chord",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "browserify test/*.js -o build/test.js && echo 'open test/index.html to run the tests'",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "co": "^4.6.0",
+    "debug": "^2.2.0",
+    "simple-peer": "^6.0.4",
+    "socket.io": "^1.4.6",
+    "tape": "^4.5.1"
+  }
+}
