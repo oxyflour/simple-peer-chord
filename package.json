@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "browserify test/*.js -o build/test.js && echo 'open test/index.html to run the tests'",
+    "watch-test": "watchify test/*.js -o build/test.js",
+    "watch-example": "watchify example/*.js -o build/example.js",
     "start": "node server.js"
   },
   "keywords": [],
