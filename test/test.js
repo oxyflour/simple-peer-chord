@@ -14,8 +14,7 @@ var count = 8,
 test('create a node', t => {
 	t.plan(4)
 
-	var chord = new Chord(opts)
-	chord.start()
+	var chord = chords[0] = new Chord(opts, true)
 
 	setTimeout(_ => {
 		co(chord.node.findPredecessorId(chord.id))
@@ -27,8 +26,6 @@ test('create a node', t => {
 		co(chord.node.findSuccessorId(NodeId.from()))
 			.then(id => t.equal(id, chord.id))
 	}, 1000)
-
-	t.once('end', _ => chord.stop())
 })
 
 test('join to network', t => {
@@ -37,10 +34,8 @@ test('join to network', t => {
 	var interval = 3000
 
 	Array(count).fill(0).map((_, i) => setTimeout(_ => {
-		var localChord = chords[0],
-			chord = chords[i] = new Chord(opts)
-		chord.start({ localChord })
-		console.log('started chord #' + i)
+		chords.push(new Chord(opts, chords[0]))
+		console.log('started chord #' + (i + 1))
 	}, i * interval))
 
 	setTimeout(_ => {
@@ -57,7 +52,7 @@ test('join to network', t => {
 })
 
 test('routing', t => {
-	t.plan(count * (count - 1))
+	t.plan(count * (count + 1))
 
 	chords.forEach(c => c.recv((evt, data) => {
 		if (evt === 'ping')
@@ -91,9 +86,7 @@ test('node failure', t => {
 test('node rejoin', t => {
 	t.plan(4)
 
-	var chord = new Chord(opts)
-	chord.start({ localChord:chords[0] })
-	chords.push(chord)
+	chords.push(new Chord(opts, chords[0]))
 
 	setTimeout(_ => {
 		var idToQuery = NodeId.from()
@@ -106,12 +99,6 @@ test('node rejoin', t => {
 		Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
 			.then(ret => t.deepEqual(ret, chords.map(c => c.id)))
 	}, 15000)
-})
 
-test('stop', t => {
-	t.plan(1)
-
-	chords.forEach(c => c.stop())
-
-	t.ok(chords.every(c => !c.started))
+	t.once('end', _ => chords.forEach(c => c.stop()))
 })

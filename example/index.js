@@ -2,36 +2,45 @@ const Chord = require('../lib/chord'),
 	NodeId = require('../lib/node-id'),
 	co = require('co')
 
-const HOST = 'u.ofr.me:8088'
+const HOST = 'u.ofr.me:8088',
+	WEBSOCKET_BOOTSTRAP = {
+		url: 'ws://' + HOST,
+		opts: { transports:['websocket'] }
+	}
 
 global.chords = [ ]
 
 global.checkRoute = function(i) {
 	var id = NodeId.from(i),
 		cs = global.chords.filter(c => c.started && Object.keys(c.hub.conns).length)
-	Promise.all(cs.map(c => co(c.node.findSuccessorId(id)))).then(r => console.info(r))
-	Promise.all(cs.map(c => co(c.node.findPredecessorId(id)))).then(r => console.info(r))
+	Promise.all(cs.map(c => co(c.node.findSuccessorId(id))))
+		.then(r => console.info(r.every(v => v === r[0]) && 'ok', r))
+	Promise.all(cs.map(c => co(c.node.findPredecessorId(id))))
+		.then(r => console.info(r.every(v => v === r[0]) && 'ok', r))
 }
 
-global.addChord = function(id) {
-	var localChord = global.chords['$' + id] ||
-			global.chords.filter(c => c.started)[0],
-		bootstrap = { localChord }
-	if (!localChord) {
-		var transports = [ 'websocket' ],
-			ioClient = io('ws://' + HOST, { transports })
-		bootstrap = { ioClient }
-	}
-	var chord = new Chord()
-		.start(bootstrap)
-		.recv((evt, data) => console.log('[' + chord.id + ']', evt, data))
+global.addChord = function(id, next) {
+	var bootstrap = global.chords['$' + id] || global.chords.filter(c => c.started)[0] || true,
+		chord = new Chord({ }, bootstrap)
+	chord.recv((evt, data) => evt === 'chord-start' && next && (next() || true))
+
 	global.chords.push(chord)
 	global.chords['$' + chord.id] = chord
 }
 
-var script = document.createElement('script')
-script.onload = _ => Array(15).fill(0).map(
-	(_, i) => setTimeout(global.addChord, i * (1 + 0.05) * 8000))
+global.acceptConn = function(button) {
+	var bootstrap = global.chords.filter(c => c.started)[0],
+		channel = 'some sample channel'
+
+	button.disabled = true
+	bootstrap.start(Object.assign(WEBSOCKET_BOOTSTRAP, { channel }))
+		.then(_ => button.disabled = false)
+		.catch(_ => button.disabled = false)
+}
+
+var script = document.createElement('script'),
+	nodeCount = 15
+script.onload = _ => global.addChord(null, _ => nodeCount -- > 0 && setTimeout(script.onload, 5000))
 script.src = '//' + HOST + '/socket.io/socket.io.js'
 document.body.appendChild(script)
 
