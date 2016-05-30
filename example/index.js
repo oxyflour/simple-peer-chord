@@ -35,7 +35,7 @@ global.addChord = function(button) {
 	global.chords['$' + chord.id] = chord
 
 	button.disabled = true
-	chord.recv((evt, data) => evt === 'chord-start' && !(button.disabled = false))
+	chord.once('chord-start', _ => button.disabled = false)
 }
 
 global.acceptConn = function(button) {
