@@ -10,22 +10,32 @@ const HOST = 'u.ofr.me:8088',
 
 global.chords = [ ]
 
-global.checkRoute = function(i) {
-	var id = NodeId.from(i),
+global.checkRoute = function(button) {
+	var id = NodeId.from(),
 		cs = global.chords.filter(c => c.started && Object.keys(c.hub.conns).length)
-	Promise.all(cs.map(c => co(c.node.findSuccessorId(id))))
-		.then(r => console.info(r.every(v => v === r[0]) && 'ok', r))
-	Promise.all(cs.map(c => co(c.node.findPredecessorId(id))))
-		.then(r => console.info(r.every(v => v === r[0]) && 'ok', r))
+
+	button.disabled = true
+	button.innerText = 'checking route...'
+	Promise.all([
+		Promise.all(cs.map(c => co(c.node.findSuccessorId(id))))
+			.then(r => (console.info(r), r.every(v => v === r[0]))),
+		Promise.all(cs.map(c => co(c.node.findPredecessorId(id))))
+			.then(r => (console.info(r), r.every(v => v === r[0]))),
+	])
+		.then(r => button.innerText = r[0] && r[1] ? 'check route (ok)' : 'check route (not ok)')
+		.then(_ => button.disabled = false)
+		.catch(_ => button.disabled = false)
 }
 
-global.addChord = function(id, next) {
-	var bootstrap = global.chords['$' + id] || global.chords.filter(c => c.started)[0] || true,
+global.addChord = function(button) {
+	var bootstrap = global.chords.filter(c => c.started)[0] || true,
 		chord = new Chord({ }, bootstrap)
-	chord.recv((evt, data) => evt === 'chord-start' && next && (next() || true))
 
 	global.chords.push(chord)
 	global.chords['$' + chord.id] = chord
+
+	button.disabled = true
+	chord.recv((evt, data) => evt === 'chord-start' && !(button.disabled = false))
 }
 
 global.acceptConn = function(button) {
@@ -40,7 +50,7 @@ global.acceptConn = function(button) {
 
 var script = document.createElement('script'),
 	nodeCount = 15
-script.onload = _ => global.addChord(null, _ => nodeCount -- > 0 && setTimeout(script.onload, 5000))
+script.onload = _ => global.addChord({ })
 script.src = '//' + HOST + '/socket.io/socket.io.js'
 document.body.appendChild(script)
 
