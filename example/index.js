@@ -1,5 +1,5 @@
 const Chord = require('../lib/chord'),
-	NodeId = require('../lib/node-id'),
+	NodeId = require('../lib/node-id')(),
 	co = require('co')
 
 const HOST = 'u.ofr.me:8088',
@@ -11,7 +11,7 @@ const HOST = 'u.ofr.me:8088',
 global.chords = [ ]
 
 global.checkRoute = function(button) {
-	var id = NodeId.from(),
+	var id = NodeId.create(),
 		cs = global.chords.filter(c => c.started && Object.keys(c.hub.conns).length)
 
 	button.disabled = true

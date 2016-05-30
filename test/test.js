@@ -2,10 +2,11 @@ var test = require('tape'),
 	co = require('co'),
 	wrtc = require('wrtc'),
 	Chord = require('../lib/chord'),
-	NodeId = require('../lib/node-id')
+	NodeId = require('../lib/node-id')()
 
 var count = 8,
 	chords = [ ],
+	interval = 3000,
 	opts = {
 		stabilizeInterval: 500,
 		peerOptions: { wrtc },
@@ -21,9 +22,9 @@ test('create a node', t => {
 			.then(id => t.equal(id, chord.id))
 		co(chord.node.findSuccessorId(chord.id))
 			.then(id => t.equal(id, chord.id))
-		co(chord.node.findPredecessorId(NodeId.from()))
+		co(chord.node.findPredecessorId(NodeId.create()))
 			.then(id => t.equal(id, chord.id))
-		co(chord.node.findSuccessorId(NodeId.from()))
+		co(chord.node.findSuccessorId(NodeId.create()))
 			.then(id => t.equal(id, chord.id))
 	}, 1000)
 })
@@ -31,15 +32,21 @@ test('create a node', t => {
 test('join to network', t => {
 	t.plan(4)
 
-	var interval = 3000
+	var remaining = count
 
-	Array(count).fill(0).map((_, i) => setTimeout(_ => {
-		chords.push(new Chord(opts, chords[0]))
-		console.log('started chord #' + (i + 1))
-	}, i * interval))
+	function addChord() {
+		var chord = new Chord(opts, chords[0])
+		chords.push(chord)
 
-	setTimeout(_ => {
-		var idToQuery = NodeId.from()
+		console.log('node added, ' + (-- remaining) + ' remainning')
+		chord.recv(evt => {
+			if (evt === 'chord-start')
+				return setTimeout(remaining > 0 ? addChord : checkResult, interval)
+		})
+	}
+
+	function checkResult() {
+		var idToQuery = NodeId.create()
 		Promise.all(chords.map(c => co(c.node.findPredecessorId(idToQuery))))
 			.then(ret => t.ok(ret.every(r => r === ret[0])))
 		Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
@@ -48,7 +55,9 @@ test('join to network', t => {
 			.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId)))
 		Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
 			.then(ret => t.deepEqual(ret, chords.map(c => c.id)))
-	}, count * interval + 15000)
+	}
+
+	addChord()
 })
 
 test('routing', t => {
@@ -71,7 +80,7 @@ test('node failure', t => {
 	chords.pop().stop()
 
 	setTimeout(_ => {
-		var idToQuery = NodeId.from()
+		var idToQuery = NodeId.create()
 		Promise.all(chords.map(c => co(c.node.findPredecessorId(idToQuery))))
 			.then(ret => t.ok(ret.every(r => r === ret[0])))
 		Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
@@ -80,7 +89,7 @@ test('node failure', t => {
 			.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId)))
 		Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
 			.then(ret => t.deepEqual(ret, chords.map(c => c.id)))
-	}, 15000)
+	}, interval)
 })
 
 test('node rejoin', t => {
@@ -89,7 +98,7 @@ test('node rejoin', t => {
 	chords.push(new Chord(opts, chords[0]))
 
 	setTimeout(_ => {
-		var idToQuery = NodeId.from()
+		var idToQuery = NodeId.create()
 		Promise.all(chords.map(c => co(c.node.findPredecessorId(idToQuery))))
 			.then(ret => t.ok(ret.every(r => r === ret[0])))
 		Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
@@ -98,7 +107,7 @@ test('node rejoin', t => {
 			.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId)))
 		Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
 			.then(ret => t.deepEqual(ret, chords.map(c => c.id)))
-	}, 15000)
+	}, interval)
 
 	t.once('end', _ => chords.forEach(c => c.stop()))
 })

@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "big-integer": "^1.6.15",
     "co": "^4.6.0",
     "debug": "^2.2.0",
     "simple-peer": "^6.0.4",
