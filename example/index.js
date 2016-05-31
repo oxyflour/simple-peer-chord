@@ -36,6 +36,7 @@ global.addChord = function(button) {
 
 	button.disabled = true
 	chord.once('chord-start', _ => button.disabled = false)
+	chord.on('say', data => console.log('[' + chord.id + ']', data))
 }
 
 global.acceptConn = function(button) {
