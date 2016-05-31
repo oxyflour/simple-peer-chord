@@ -10,8 +10,8 @@ const HOST = 'u.ofr.me:8088',
 
 global.chords = [ ]
 
-global.checkRoute = function(button) {
-	var id = NodeId.create(),
+global.checkRoute = function(button, target) {
+	var id = NodeId.create(target),
 		cs = global.chords.filter(c => c.started && Object.keys(c.hub.conns).length)
 
 	button.disabled = true
@@ -27,20 +27,24 @@ global.checkRoute = function(button) {
 		.catch(_ => button.disabled = false)
 }
 
-global.addChord = function(button) {
+global.addChord = function(button, id) {
 	var bootstrap = global.chords.filter(c => c.started)[0] || true,
-		chord = new Chord({ }, bootstrap)
+		chord = new Chord({ id }, bootstrap)
 
 	global.chords.push(chord)
 	global.chords['$' + chord.id] = chord
 
 	button.disabled = true
-	chord.once('chord-start', _ => button.disabled = false)
 	chord.on('say', data => console.log('[' + chord.id + ']', data))
+	chord.once('chord-start', _ => {
+		button.disabled = false
+		if (nodeCount -- > 0)
+			setTimeout(_ => global.addChord(button), 500)
+	})
 }
 
-global.acceptConn = function(button) {
-	var bootstrap = global.chords.filter(c => c.started)[0],
+global.acceptConn = function(button, id) {
+	var bootstrap = global.chords['$' + id] || global.chords.filter(c => c.started)[0],
 		channel = 'some sample channel'
 
 	button.disabled = true
@@ -89,56 +93,59 @@ setTimeout(function draw() {
 				.concat(Object.keys(chord.hub.conns)), [ ])
 	allNodes = allNodes.filter((id, i) => id && allNodes.indexOf(id) === i)
 
-	var allLinks = { }, nodeConns = { }
+	var allLinks = { }, nodeConns = { }, nodeStore = { }
 	global.chords.forEach((chord, i) => {
-		var ids = Object.keys(chord.hub.conns)
-		nodeConns[chord.id] = ids.length
-		ids.forEach(id => {
+		nodeConns[chord.id] = Object.keys(chord.hub.conns).length
+		nodeStore[chord.id] = Object.keys(chord.node.storage).length
+		Object.keys(chord.hub.conns).forEach(id => {
 			var key = [chord.id, id].sort().join(':')
 			allLinks[key] = true
 		})
 	})
 
 	var linksToShow = Object.keys(allLinks).sort().join(';')
-	if (linksAlreadyShown === linksToShow)
-		return
-	else
+	if (linksAlreadyShown !== linksToShow) {
 		linksAlreadyShown = linksToShow
 
-	var root = { }, map = { }
-	var children = root.children = allNodes.map(id => map[id] = {
-		name: id,
-		size: 1,
-		parent: root,
-	})
+		var root = { }, map = { }
+		var children = root.children = allNodes.map(id => map[id] = {
+			name: id,
+			size: 1,
+			parent: root,
+		})
 
-	var nodes = cluster.nodes(root)
-	var links = bundle(Object.keys(allLinks).map(key => key.split(':')).map(pair => ({
-		source: map[ pair[0] ],
-		target: map[ pair[1] ],
-	})))
+		var nodes = cluster.nodes(root)
+		var links = bundle(Object.keys(allLinks).map(key => key.split(':')).map(pair => ({
+			source: map[ pair[0] ],
+			target: map[ pair[1] ],
+		})))
 
-	svg.selectAll('*').remove()
+		svg.selectAll('*').remove()
 
-	svg.selectAll('.link')
-		.data(links)
-		.enter()
-			.append('path')
-				.attr('class', 'link')
-				.attr('d', line)
+		svg.selectAll('.link')
+			.data(links)
+			.enter()
+				.append('path')
+					.attr('class', 'link')
+					.attr('d', line)
 
-	svg.selectAll('.node')
-		.data(nodes.filter(n => !n.children))
-		.enter()
-			.append('g')
-				.attr('class', 'node')
-				.attr('transform', d => `rotate(${d.x - 90}) translate(${d.y})`)
-			.append('text')
-				.attr('dx', d => d.x < 180 ? 8 : -8)
-				.attr('dy', '.31em')
-				.attr('text-anchor', d => d.x < 180 ? 'start' : 'end')
-				.attr('transform', d => d.x < 180 ? null : 'rotate(180)')
-				.text(d => d.name +
-					(nodeConns[d.name] ? ' [' + nodeConns[d.name] + ']' : ''))
-				.classed('highlight', d => nodeConns[d.name] >= 0)
-}, 2000)
+		svg.selectAll('.node')
+			.data(nodes.filter(n => !n.children))
+			.enter()
+				.append('g')
+					.attr('class', 'node')
+					.attr('transform', d => `rotate(${d.x - 90}) translate(${d.y})`)
+				.append('text')
+					.attr('dx', d => d.x < 180 ? 8 : -8)
+					.attr('dy', '.31em')
+					.attr('text-anchor', d => d.x < 180 ? 'start' : 'end')
+					.attr('transform', d => d.x < 180 ? null : 'rotate(180)')
+					.text(d => d.name +
+						(nodeConns[d.name] ? ' [' + nodeConns[d.name] + ']' : ''))
+					.classed('has-conn', d => nodeConns[d.name] >= 0)
+	}
+
+	svg.selectAll('.node text')
+		.attr('fill', d => nodeStore[d.name] ? 'red' : 'black')
+
+}, 1000)
