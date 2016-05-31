@@ -6,7 +6,7 @@ var test = require('tape'),
 
 var count = 8,
 	chords = [ ],
-	interval = 3000,
+	interval = 2000,
 	opts = {
 		stabilizeInterval: 500,
 		peerOptions: { wrtc },
@@ -96,7 +96,9 @@ test('storage put #2', t => {
 test('node failure', t => {
 	t.plan(3)
 
-	chords.pop().stop()
+	var chord = chords.filter(c => Object.keys(c.node.storage).length)[0]
+	chord.stop()
+	chords = chords.filter(c => c !== chord)
 
 	setTimeout(_ => {
 		var idToQuery = NodeId.create()
