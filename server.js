@@ -22,7 +22,7 @@ ioServer.on('connection', sock => {
 		console.log('registered channel ' + channel)
 		if (!channel) {
 			sock.emit('joined', true)
-			co(chord.connectWebsocket(sock))
+			co(chord.connectViaWebSocket(sock))
 		}
 		else if (conns[channel]) {
 			var target = conns[channel]

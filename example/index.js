@@ -6,7 +6,6 @@ const HOST = 'u.ofr.me:8088',
 	BOOTSTRAP = {
 		url: 'ws://' + HOST,
 		opts: { transports:['websocket'] },
-		channel: 'some random strings'
 	}
 
 global.chords = [ ]
@@ -29,7 +28,7 @@ global.checkRoute = function(button, target) {
 }
 
 global.addChord = function(button, id) {
-	var chord = new Chord({ id }, global.chords[0] || true)
+	var chord = new Chord({ id }, global.chords[0] || BOOTSTRAP)
 
 	button.disabled = true
 	chord.on('say', data => {
@@ -50,8 +49,6 @@ var script = document.createElement('script'),
 script.onload = _ => global.addChord({ })
 script.src = '//' + HOST + '/socket.io/socket.io.js'
 document.body.appendChild(script)
-
-setTimeout(script.onload, 500)
 
 const DIAMETER = 500,
 	RADIUS = DIAMETER / 2
