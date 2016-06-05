@@ -60,12 +60,12 @@ test('join to network', t => {
 test('routing', t => {
 	t.plan(chords.length * (chords.length - 1))
 
-	chords.forEach(c => c.on('ping1', data => {
+	chords.forEach(c => c.on('test-routing', data => {
 		t.equal(data, c.id)
 	}))
 
 	chords.forEach(c => chords.forEach(s => {
-		if (c !== s) s.send(c.id, 'ping1', c.id)
+		if (c !== s) s.send(c.id, 'test-routing', c.id)
 	}))
 })
 
@@ -74,11 +74,11 @@ test('multi-routing', t => {
 
 	var rand = Math.random()
 
-	chords.forEach(c => c.on('ping2', data => {
+	chords.forEach(c => c.on('test-multi-routing', data => {
 		t.equal(data, rand)
 	}))
 
-	chords[0].send(chords.map(c => c.id), 'ping2', rand)
+	chords[0].send(chords.map(c => c.id), 'test-multi-routing', rand)
 })
 
 test('storage put #1', t => {
@@ -100,6 +100,20 @@ test('storage put #2', t => {
 	setTimeout(_ => {
 		Promise.all(chords.map(c => c.get('hello')))
 			.then(ret => t.deepEqual(ret, chords.map(c => 'world!')))
+	}, interval)
+})
+
+test('subscribe/publish', t => {
+	t.plan(3 * chords.length)
+
+	var cs = chords.slice(0, 3),
+		channel = '1'
+
+	cs.forEach(c => c.subscribe(channel))
+	cs.forEach(c => c.on('test-sub-pub', ch => t.equal(ch, channel)))
+
+	setTimeout(_ => {
+		chords.forEach(c => c.publish(channel, 'test-sub-pub', channel))
 	}, interval)
 })
 
