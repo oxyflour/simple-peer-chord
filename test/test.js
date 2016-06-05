@@ -1,6 +1,5 @@
 var test = require('tape'),
 	co = require('co'),
-	wrtc = require('wrtc'),
 	Chord = require('../lib/chord'),
 	NodeId = require('../lib/node-id')()
 
@@ -9,7 +8,6 @@ var count = 8,
 	interval = 3000,
 	opts = {
 		stabilizeInterval: 200,
-		peerOptions: { wrtc },
 	}
 
 test('create a node', t => {
@@ -60,15 +58,27 @@ test('join to network', t => {
 })
 
 test('routing', t => {
-	t.plan(count * (count + 1))
+	t.plan(chords.length * (chords.length - 1))
 
-	chords.forEach(c => c.on('ping', data => {
+	chords.forEach(c => c.on('ping1', data => {
 		t.equal(data, c.id)
 	}))
 
 	chords.forEach(c => chords.forEach(s => {
-		if (c !== s) s.send(c.id, 'ping', c.id)
+		if (c !== s) s.send(c.id, 'ping1', c.id)
 	}))
+})
+
+test('multi-routing', t => {
+	t.plan(chords.length)
+
+	var rand = Math.random()
+
+	chords.forEach(c => c.on('ping2', data => {
+		t.equal(data, rand)
+	}))
+
+	chords[0].send(chords.map(c => c.id), 'ping2', rand)
 })
 
 test('storage put #1', t => {

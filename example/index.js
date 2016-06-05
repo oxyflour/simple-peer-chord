@@ -3,16 +3,17 @@ const Chord = require('../lib/chord'),
 	co = require('co')
 
 const HOST = 'u.ofr.me:8088',
-	WEBSOCKET_BOOTSTRAP = {
+	BOOTSTRAP = {
 		url: 'ws://' + HOST,
-		opts: { transports:['websocket'] }
+		opts: { transports:['websocket'] },
+		channel: 'some random strings'
 	}
 
 global.chords = [ ]
 
 global.checkRoute = function(button, target) {
 	var id = NodeId.create(target),
-		cs = global.chords.filter(c => c.started && Object.keys(c.hub.conns).length)
+		cs = global.chords.filter(c => c.running && Object.keys(c.hub.conns).length)
 
 	button.disabled = true
 	button.innerText = 'checking route...'
@@ -28,29 +29,20 @@ global.checkRoute = function(button, target) {
 }
 
 global.addChord = function(button, id) {
-	var bootstrap = global.chords.filter(c => c.started)[0] || true,
-		chord = new Chord({ id }, bootstrap)
+	var chord = new Chord({ id }, global.chords[0] || true)
+
+	button.disabled = true
+	chord.on('say', data => {
+		console.log('[' + chord.id + ']', data)
+	})
+	chord.once('chord-start', _ => {
+		button.disabled = false
+		if (-- nodeCount > 0)
+			setTimeout(_ => global.addChord(button), 500)
+	})
 
 	global.chords.push(chord)
 	global.chords['$' + chord.id] = chord
-
-	button.disabled = true
-	chord.on('say', data => console.log('[' + chord.id + ']', data))
-	chord.once('chord-start', _ => {
-		button.disabled = false
-		if (nodeCount -- > 0)
-			setTimeout(_ => global.addChord(button), 500)
-	})
-}
-
-global.acceptConn = function(button, id) {
-	var bootstrap = global.chords['$' + id] || global.chords.filter(c => c.started)[0],
-		channel = 'some sample channel'
-
-	button.disabled = true
-	bootstrap.start(Object.assign(WEBSOCKET_BOOTSTRAP, { channel }))
-		.then(_ => button.disabled = false)
-		.catch(_ => button.disabled = false)
 }
 
 var script = document.createElement('script'),
@@ -58,6 +50,8 @@ var script = document.createElement('script'),
 script.onload = _ => global.addChord({ })
 script.src = '//' + HOST + '/socket.io/socket.io.js'
 document.body.appendChild(script)
+
+setTimeout(script.onload, 500)
 
 const DIAMETER = 500,
 	RADIUS = DIAMETER / 2
