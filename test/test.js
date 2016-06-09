@@ -104,7 +104,7 @@ test('storage put #2', t => {
 })
 
 test('subscribe/publish', t => {
-	t.plan(3 * chords.length)
+	t.plan(3 * (chords.length - 1))
 
 	var cs = chords.slice(0, 3),
 		channel = '1'
