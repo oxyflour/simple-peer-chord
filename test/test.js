@@ -3,13 +3,18 @@ var test = require('tape'),
 	Chord = require('../lib/chord'),
 	NodeId = require('../lib/node-id')()
 
-var count = 8,
+var count = 10,
 	chords = [ ],
 	interval = 3000,
 	opts = {
-		stabilizeInterval: 200,
+		stabilizeInterval: 300,
 		signalTimeout: 2000,
+		nodeOptions: {
+			fixFingerCocurrency: 30,
+		},
 	}
+
+global.chords = chords
 
 test('create a node', t => {
 	t.plan(4)
@@ -39,24 +44,24 @@ test('join to network', t => {
 		chords.push(chord)
 
 		console.log('node added, ' + (-- remaining) + ' remainning')
-		chord.once('chord-start', _ => setTimeout(_ => {
-			checkResult()
-
+		chord.once('chord-start', _ => setTimeout(_ => checkResult(_ => {
 			if (remaining > 0)
-				setTimeout(addChord, interval)
-		}, interval))
+				setTimeout(addChord, 500)
+		}), interval))
 	}
 
-	function checkResult() {
+	function checkResult(callback) {
 		var idToQuery = NodeId.create()
-		Promise.all(chords.map(c => co(c.node.findPredecessorId(idToQuery))))
-			.then(ret => t.deepEqual(ret, chords.map(c => ret[0])))
-		Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
-			.then(ret => t.deepEqual(ret, chords.map(c => ret[0])))
-		Promise.all(chords.map(c => co(c.node.findPredecessorId(c.id))))
-			.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId)))
-		Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
-			.then(ret => t.deepEqual(ret, chords.map(c => c.id)))
+		return Promise.all([
+			Promise.all(chords.map(c => co(c.node.findPredecessorId(idToQuery))))
+				.then(ret => t.deepEqual(ret, chords.map(c => ret[0]))),
+			Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
+				.then(ret => t.deepEqual(ret, chords.map(c => ret[0]))),
+			Promise.all(chords.map(c => co(c.node.findPredecessorId(c.id))))
+				.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId))),
+			Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
+				.then(ret => t.deepEqual(ret, chords.map(c => c.id))),
+		]).then(callback).catch(callback)
 	}
 
 	addChord()
@@ -128,7 +133,7 @@ test('node failure #1', t => {
 	var keys = chords.map(c => Object.keys(c.node.storage)).filter(keys => keys[0]),
 		chord = chords.filter(c => c.node.isResponsibleFor(keys[0]))[0]
 	chord.stop()
-	chords = chords.filter(c => c !== chord)
+	chords.splice(chords.indexOf(chord), 1)
 
 	setTimeout(_ => {
 		var idToQuery = NodeId.create()
@@ -164,7 +169,7 @@ test('node failure #2', t => {
 	var keys = chords.map(c => Object.keys(c.node.storage)).filter(keys => keys[0]),
 		chord = chords.filter(c => c.node.isResponsibleFor(keys[0]))[0]
 	chord.stop()
-	chords = chords.filter(c => c !== chord)
+	chords.splice(chords.indexOf(chord), 1)
 
 	setTimeout(_ => {
 		var idToQuery = NodeId.create()
@@ -182,25 +187,25 @@ test('stop', t => {
 	t.plan((chords.length - 1) * 4)
 
 	var stopChord = function() {
-		chords.pop().stop()
-		setTimeout(_ => {
-			checkResult()
-
+		chords.shift().stop()
+		setTimeout(_ => checkResult(_ => {
 			if (chords.length)
-				setTimeout(stopChord, interval)
-		}, interval)
+				setTimeout(stopChord, 500)
+		}), interval)
 	}
 
-	function checkResult() {
+	function checkResult(callback) {
 		var idToQuery = NodeId.create()
-		Promise.all(chords.map(c => co(c.node.findPredecessorId(idToQuery))))
-			.then(ret => t.deepEqual(ret, chords.map(c => ret[0])))
-		Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
-			.then(ret => t.deepEqual(ret, chords.map(c => ret[0])))
-		Promise.all(chords.map(c => co(c.node.findPredecessorId(c.id))))
-			.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId)))
-		Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
-			.then(ret => t.deepEqual(ret, chords.map(c => c.id)))
+		Promise.all([
+			Promise.all(chords.map(c => co(c.node.findPredecessorId(idToQuery))))
+				.then(ret => t.deepEqual(ret, chords.map(c => ret[0]))),
+			Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
+				.then(ret => t.deepEqual(ret, chords.map(c => ret[0]))),
+			Promise.all(chords.map(c => co(c.node.findPredecessorId(c.id))))
+				.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId))),
+			Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
+				.then(ret => t.deepEqual(ret, chords.map(c => c.id))),
+		]).then(callback).catch(callback)
 	}
 
 	stopChord()
