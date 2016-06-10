@@ -8,6 +8,9 @@ var count = 8,
 	interval = 3000,
 	opts = {
 		stabilizeInterval: 200,
+		nodeOptions: {
+			fixFingerCocurrency: 10,
+		},
 	}
 
 test('create a node', t => {
@@ -81,7 +84,7 @@ test('multi-routing', t => {
 	chords[0].send(chords.map(c => c.id), 'test-multi-routing', rand)
 })
 
-test('storage put #1', t => {
+test('put/get #1', t => {
 	t.plan(1)
 
 	chords[0].put('hello', 'world')
@@ -92,7 +95,7 @@ test('storage put #1', t => {
 	}, interval)
 })
 
-test('storage put #2', t => {
+test('put/get #2', t => {
 	t.plan(1)
 
 	chords[0].put('hello', 'world!')
