@@ -8,6 +8,7 @@ var count = 8,
 	interval = 3000,
 	opts = {
 		stabilizeInterval: 200,
+		signalTimeout: 2000,
 		nodeOptions: {
 			fixFingerCocurrency: 10,
 		},
