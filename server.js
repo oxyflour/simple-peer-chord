@@ -44,3 +44,5 @@ ioServer.on('connection', sock => {
 server.listen(8088, _ => {
 	console.log('listening at port ' + server.address().port)
 })
+
+global.chord = chord
