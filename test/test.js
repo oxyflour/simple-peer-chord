@@ -3,14 +3,17 @@ var test = require('tape'),
 	Chord = require('../lib/chord'),
 	NodeId = require('../lib/node-id')()
 
-var count = 10,
+var count = 15,
 	chords = [ ],
 	interval = 3000,
 	opts = {
-		stabilizeInterval: 300,
-		signalTimeout: 2000,
+		nodePollTimeout: 300,
 		nodeOptions: {
 			fixFingerCocurrency: 30,
+		},
+		hubOptions: {
+			peerConnectTimeout: 2000,
+			peerCallTimeout: 2000,
 		},
 	}
 
@@ -61,7 +64,7 @@ test('join to network', t => {
 				.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId))),
 			Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
 				.then(ret => t.deepEqual(ret, chords.map(c => c.id))),
-		]).then(callback).catch(callback)
+		]).then(callback)
 	}
 
 	addChord()
@@ -113,21 +116,37 @@ test('put/get #2', t => {
 	}, interval)
 })
 
-test('subscribe/publish', t => {
+test('subscribe/publish #1', t => {
 	t.plan(3 * (chords.length - 1))
 
 	var cs = chords.slice(0, 3),
 		channel = '1'
 
-	cs.forEach(c => c.subscribe(channel))
-	cs.forEach(c => c.on('test-sub-pub', ch => t.equal(ch, channel)))
+	Promise.all(cs.map(c => c.subscribe(channel))).then(_ => {
+		chords.forEach(c => c.on('test-sub-pub', ch => t.equal(ch, channel)))
 
-	setTimeout(_ => {
-		chords.forEach(c => c.publish(channel, 'test-sub-pub', channel))
-	}, interval)
+		setTimeout(_ => {
+			chords.forEach(c => c.publish(channel, 'test-sub-pub', channel))
+		}, interval)
+	})
 })
 
-test('node failure #1', t => {
+test('subscribe/publish #2', t => {
+	t.plan(2 * (chords.length - 1))
+
+	var cs = chords.slice(0, 3),
+		channel = '1'
+
+	cs[0].unsubscribe(channel).then(_ => {
+		chords.forEach(c => c.on('test-sub-pub2', ch => t.equal(ch, channel)))
+
+		setTimeout(_ => {
+			chords.forEach(c => c.publish(channel, 'test-sub-pub2', channel))
+		}, interval)
+	})
+})
+
+test('node failure', t => {
 	t.plan(3)
 
 	var keys = chords.map(c => Object.keys(c.node.storage)).filter(keys => keys[0]),
@@ -163,34 +182,14 @@ test('node rejoin', t => {
 	}, interval))
 })
 
-test('node failure #2', t => {
-	t.plan(3)
-
-	var keys = chords.map(c => Object.keys(c.node.storage)).filter(keys => keys[0]),
-		chord = chords.filter(c => c.node.isResponsibleFor(keys[0]))[0]
-	chord.stop()
-	chords.splice(chords.indexOf(chord), 1)
-
-	setTimeout(_ => {
-		var idToQuery = NodeId.create()
-		Promise.all(chords.map(c => co(c.node.findPredecessorId(idToQuery))))
-			.then(ret => t.deepEqual(ret, chords.map(c => ret[0])))
-		Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
-			.then(ret => t.deepEqual(ret, chords.map(c => ret[0])))
-		Promise.all(chords.map(c => c.get('hello')))
-			.then(ret => t.deepEqual(ret, chords.map(c => 'world!')))
-	}, interval)
-
-})
-
 test('stop', t => {
-	t.plan((chords.length - 1) * 4)
+	t.plan(chords.length * 3)
 
 	var stopChord = function() {
 		chords.shift().stop()
 		setTimeout(_ => checkResult(_ => {
 			if (chords.length)
-				setTimeout(stopChord, 500)
+				setTimeout(stopChord, 1000)
 		}), interval)
 	}
 
@@ -201,11 +200,9 @@ test('stop', t => {
 				.then(ret => t.deepEqual(ret, chords.map(c => ret[0]))),
 			Promise.all(chords.map(c => co(c.node.findSuccessorId(idToQuery))))
 				.then(ret => t.deepEqual(ret, chords.map(c => ret[0]))),
-			Promise.all(chords.map(c => co(c.node.findPredecessorId(c.id))))
-				.then(ret => t.deepEqual(ret, chords.map(c => c.node.predecessorId))),
-			Promise.all(chords.map(c => co(c.node.findSuccessorId(c.id))))
-				.then(ret => t.deepEqual(ret, chords.map(c => c.id))),
-		]).then(callback).catch(callback)
+			Promise.all(chords.map(c => c.get('hello')))
+				.then(ret => t.deepEqual(ret, chords.map(c => 'world!'))),
+		]).then(callback)
 	}
 
 	stopChord()
