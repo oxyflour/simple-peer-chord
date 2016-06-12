@@ -1,15 +1,14 @@
 {
   "name": "simple-peer-chord",
   "version": "0.0.1",
-  "description": "",
+  "description": "a chord implement for decentralized, serverless applications on browsers",
   "main": "index.js",
   "scripts": {
     "watch-test": "watchify test/*.js -o build/test.js",
-    "watch-example": "watchify example/*.js -o build/example.js",
-    "start": "node server.js"
+    "watch-example": "watchify example/*.js -o build/example.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["p2p", "chord", "webrtc"],
+  "author": "oxyflour <oxyflour@hotmail.com>",
   "license": "ISC",
   "dependencies": {
     "big-integer": "^1.6.15",
