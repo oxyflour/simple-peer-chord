@@ -10,10 +10,7 @@ const Chord = require('./lib/chord'),
 	chord = new Chord({ peerOptions }, true)
 
 ioServer.on('connection', sock => {
-	sock.once('join', _ => {
-		sock.emit('joined', true)
-		co(chord.connectViaWebSocket(sock))
-	})
+	co(chord.connectViaWebSocket(sock))
 })
 
 server.listen(8088, _ => {
