@@ -3,17 +3,15 @@ var test = require('tape'),
 	Chord = require('../lib/chord'),
 	NodeId = require('../lib/node-id')()
 
-var count = 15,
+var count = 5,
 	chords = [ ],
 	interval = 3000,
 	opts = {
 		nodePollTimeout: 300,
 		nodeOptions: {
-			fixFingerCocurrency: 30,
+			fixFingerCocurrency: 64,
 		},
 		hubOptions: {
-			peerConnectTimeout: 2000,
-			peerCallTimeout: 2000,
 		},
 	}
 
@@ -45,6 +43,8 @@ test('join to network', t => {
 	function addChord() {
 		var chord = new Chord(opts, chords[0])
 		chords.push(chord)
+
+		chord.on('info', data => console.info(data))
 
 		console.log('node added, ' + (-- remaining) + ' remainning')
 		chord.once('chord-start', _ => setTimeout(_ => checkResult(_ => {
