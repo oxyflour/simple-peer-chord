@@ -34,7 +34,7 @@ global.addChord = function(button, id) {
 	chord.on('say', data => {
 		console.log('[' + chord.id + ']', data)
 	})
-	chord.once('chord-start', _ => {
+	chord.once('ready', _ => {
 		button.disabled = false
 		if (-- nodeCount > 0)
 			setTimeout(_ => global.addChord(button), 500)
