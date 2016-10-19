@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "node test/test.js",
-    "watch-test": "watchify test/*.js -o build/test.js",
-    "watch-example": "watchify example/*.js -o build/example.js"
+    "watch-test": "mkdirp build && watchify test/*.js -o build/test.js -v",
+    "watch-example": "mkdirp build && watchify example/*.js -o build/example.js -v"
   },
   "keywords": [
     "p2p",
@@ -24,6 +24,7 @@
     "tape": "^4.5.1"
   },
   "devDependencies": {
-    "electron-webrtc": "^0.2.12"
+    "electron-webrtc": "^0.2.12",
+    "mkdirp": "^0.5.1"
   }
 }

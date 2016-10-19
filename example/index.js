@@ -2,7 +2,7 @@ const Chord = require('../lib/chord'),
 	NodeId = require('../lib/node-id')(),
 	co = require('co')
 
-const HOST = 'u.ofr.me:8088',
+const HOST = 't.ofr.me:8088',
 	BOOTSTRAP = {
 		url: 'ws://' + HOST,
 		opts: { transports:['websocket'] },
@@ -28,7 +28,7 @@ global.checkRoute = function(button, target) {
 }
 
 global.addChord = function(button, id) {
-	var chord = new Chord({ id }, global.chords[0] || true || BOOTSTRAP)
+	var chord = new Chord({ id }, global.chords[0] || BOOTSTRAP || true)
 
 	button.disabled = true
 	chord.on('say', data => {
