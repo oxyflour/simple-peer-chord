@@ -3,12 +3,14 @@ An experimental Chord implement for decentralized, serverless applications on br
 
 WARNING: This library is merely a prove of concept and does not consider much about performance or security. It has only been tested on small networks containing a few tens of nodes.
 
+![simple-peer-chord](https://cloud.githubusercontent.com/assets/1967664/19626428/57e644f6-9964-11e6-8743-4d24e6035a3f.png)
+
 ## Features
 * configurable connection numbers and dynamic finger length
 * decentralized signaling
-* distributed, redundant storage (DHT)
+* simple distributed, redundant storage
 * simple multicasting
-* publish/subscribe message to arbitrary channels
+* publish/subscribe messages to arbitrary channels
 
 ## API (experimental)
 ### ```var chord = new Chord(opts, [bootstrap])```
@@ -31,9 +33,9 @@ Create a new Chord network. The ```opts``` may contain the following fields
   // use your public key here to avoid conflicts with other networks
   subscribePrefix: '-subscribe-prefix-',
 
-  // how long to wait before the two peer finish exchanging data in the chrod network
+  // how long to wait before the two peers finish exchanging data
   signalPrepareTimeout: 5000,
-  // how long we should wait before `connect` events fired
+  // how long we should wait before `connect` events fired from simple-peer
   signalTimeout: 60000,
 
   // 
