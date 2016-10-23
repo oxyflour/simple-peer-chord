@@ -14,7 +14,20 @@ const Chord = require('./lib/chord'),
 	server = http.Server(),
 	ioServer = SocketIO(server),
 	peerOptions = { wrtc },
-	chord = new Chord({ peerOptions }, true),
+	nodeOptions = {
+		fingerTableSize: 160,
+		succListSize: 160,
+		fixFingerCocurrency: 40,
+	},
+	chordOptions = {
+		peerOptions,
+		nodeOptions,
+		minHubConnCount: 5,
+		maxHubConnCount: 160,
+		minNodeFingerSize: 20,
+		maxNodeFingerSize: 160,
+	},
+	chord = new Chord(chordOptions, true),
 	peerHosts = { /* host -> time */ },
 	time = Date.now()
 
@@ -37,9 +50,11 @@ chord.getKnownNodes = function() {
 ioServer.on('connection', sock => co(function *() {
 	try {
 		yield *chord.connectViaSocketIO(sock)
+		sock.disconnect()
 	}
 	catch (err) {
 		console.error('[ws]', err)
+		sock.disconnect()
 	}
 }))
 
@@ -49,9 +64,10 @@ server.addListener('request', (req, res) => {
 	if (req.method === 'GET' && parse.path === '/status') {
 		var id = chord.id,
 			peers = Object.keys(peerHosts),
+			predecessorId = chord.node.predecessorId,
 			fingers = chord.node.fingerIds,
 			conns = Object.keys(chord.hub.conns)
-		res.end(JSON.stringify({ id, peers, fingers, conns }))
+		res.end(JSON.stringify({ id, peers, predecessorId, fingers, conns }))
 	}
 })
 
@@ -78,49 +94,56 @@ chord.on('pub-sig-join', data => {
 	chord.send(data.id, 'pub-sig-join-' + chord.id, shouldJoin)
 })
 
-setInterval(_ => co(function *() {
-	yield chord.subscribe('sig-peer')
+co(function *() {
+	while (1) {
+		yield new Promise(resolve => setTimeout(resolve, 10000))
+		chord.subscribe('sig-peer')
 
-	var time = Date.now(),
-		hosts = Object.keys(peerHosts),
-		host = hosts[Math.floor(Math.random() * hosts.length)],
-		id = peerHosts[host] && peerHosts[host].id
-	if (host && chord.hub.has(id)) {
-		peerHosts[host] = { id, time }
-		chord.publish('sig-peer', 'pub-sig-peer', { id, host })
-	}
-	else if (host) try {
-		console.log('[sig] connecting to peer ' + host)
-
-		var sock = io('ws://' + host, { transports: ['websocket'], reconnection: false })
-		yield new Promise((resolve, reject) => {
-			sock.on('connect', resolve)
-			sock.on('connect_error', reject)
-		})
-
-		id = yield* chord.connectViaSocketIO(sock, true)
-		if (id && id !== chord.id) {
-			chord.send(id, 'pub-sig-join', { id: chord.id, nodes: chord.getKnownNodes() })
-
-			var hasJoined = yield new Promise((resolve, reject) => {
-				setTimeout(reject, 10000, 'join to ' + id + ' timeout')
-				chord.once('pub-sig-join-' + id, resolve)
-			})
-			if (!hasJoined) {
-				yield *chord.node.join(id)
-			}
-
+		var time = Date.now(),
+			hosts = Object.keys(peerHosts),
+			host = hosts[Math.floor(Math.random() * hosts.length)],
+			id = peerHosts[host] && peerHosts[host].id,
+			sock = null
+		if (host && chord.hub.has(id)) {
 			peerHosts[host] = { id, time }
 			chord.publish('sig-peer', 'pub-sig-peer', { id, host })
-			console.log('[sig] joined to ' + id + ' at ' + host)
 		}
+		else if (host) try {
+			console.log('[sig] connecting to peer ' + host)
 
-		console.log('[sig] ' + host + ' connected')
+			sock = io('ws://' + host, { transports: ['websocket'], reconnection: false })
+			yield new Promise((resolve, reject) => {
+				sock.on('connect', resolve)
+				sock.on('connect_error', reject)
+				setTimeout(reject, 1000, 'websocket connection timeout')
+			})
+
+			id = yield* chord.connectViaSocketIO(sock, true)
+			if (id && id !== chord.id) {
+				chord.send(id, 'pub-sig-join', { id: chord.id, nodes: chord.getKnownNodes() })
+
+				var hasJoined = yield new Promise((resolve, reject) => {
+					setTimeout(reject, 10000, 'join to ' + id + ' timeout')
+					chord.once('pub-sig-join-' + id, resolve)
+				})
+				if (!hasJoined) {
+					yield *chord.node.join(id)
+				}
+
+				peerHosts[host] = { id, time }
+				yield chord.publish('sig-peer', 'pub-sig-peer', { id, host })
+				console.log('[sig] joined to ' + id + ' at ' + host)
+			}
+
+			console.log('[sig] ' + host + ' connected')
+			sock.disconnect()
+		}
+		catch (err) {
+			console.error('[sig]', err)
+			sock && sock.disconnect()
+		}
 	}
-	catch (err) {
-		console.error('[sig]', err)
-	}
-}), 10000)
+})
 
 server.listen(program.port, _ => {
 	console.log('listening at port ' + server.address().port)

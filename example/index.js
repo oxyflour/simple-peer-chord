@@ -11,6 +11,7 @@ const HOST = 't.ofr.me:8089',
 require('debug').enable('chord*')
 
 global.chords = [ ]
+global.co = co
 
 global.checkRoute = function(button, target) {
 	var id = NodeId.create(target),
@@ -38,8 +39,9 @@ global.addChord = function(button, id) {
 	})
 	chord.once('ready', _ => {
 		button.disabled = false
-		if (-- nodeCount > 0)
-			setTimeout(_ => global.addChord(button), 500)
+		if (-- nodeCount > 0) {
+			setTimeout(_ => global.addChord(button), 3000)
+		}
 	})
 
 	global.chords.push(chord)
@@ -51,8 +53,6 @@ var script = document.createElement('script'),
 script.onload = _ => global.addChord({ })
 script.src = '//' + HOST + '/socket.io/socket.io.js'
 document.body.appendChild(script)
-
-script.onload()
 
 const DIAMETER = 500,
 	RADIUS = DIAMETER / 2
@@ -135,7 +135,8 @@ setTimeout(function draw() {
 					.attr('dy', '.31em')
 					.attr('text-anchor', d => d.x < 180 ? 'start' : 'end')
 					.attr('transform', d => d.x < 180 ? null : 'rotate(180)')
-					.text(d => d.name +
+					.text(d =>
+						(d.name.length > 12 ? d.name.substr(0, 10) + '...' : d.name) +
 						(nodeConns[d.name] ? ' [' + nodeConns[d.name] + ']' : ''))
 					.classed('has-conn', d => nodeConns[d.name] >= 0)
 	}
