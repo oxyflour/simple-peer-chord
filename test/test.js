@@ -31,7 +31,7 @@ function test(message, num, gen) {
 	})
 }
 
-var peerCount = 6
+var peerCount = 10
 test('create nodes', 4 * peerCount, function *(t) {
 	var remaining = peerCount
 	while (remaining -- > 0) {

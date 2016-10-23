@@ -79,7 +79,7 @@ chord.on('pub-sig-join', data => {
 })
 
 setInterval(_ => co(function *() {
-	chord.subscribe('sig-peer')
+	yield chord.subscribe('sig-peer')
 
 	var time = Date.now(),
 		hosts = Object.keys(peerHosts),
