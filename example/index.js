@@ -2,11 +2,13 @@ const Chord = require('../lib/chord'),
 	NodeId = require('../lib/node-id')(),
 	co = require('co')
 
-const HOST = 't.ofr.me:8088',
+const HOST = 't.ofr.me:8089',
 	BOOTSTRAP = {
 		url: 'ws://' + HOST,
 		opts: { transports:['websocket'] },
 	}
+
+require('debug').enable('chord*')
 
 global.chords = [ ]
 
