@@ -40,7 +40,7 @@ test('create nodes', 4 * peerCount, function *(t) {
 		console.log('node added, ' + remaining + ' remainning')
 		chords.push(chord)
 
-		yield new Promise(resolve => chord.on('ready', resolve))
+		yield new Promise(resolve => chord.on('chord-start', resolve))
 		yield sleep(interval)
 
 		var idToQuery = NodeId.create()
@@ -118,7 +118,7 @@ test('node rejoin', 3, function *(t) {
 	var chord = new Chord(opts, chords[0])
 	chords.push(chord)
 
-	yield new Promise(resolve => chord.on('ready', resolve))
+	yield new Promise(resolve => chord.on('chord-start', resolve))
 	yield sleep(interval)
 
 	var idToQuery = NodeId.create()
