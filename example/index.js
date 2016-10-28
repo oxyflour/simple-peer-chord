@@ -1,8 +1,8 @@
 const Chord = require('../lib/chord'),
-	NodeId = require('../lib/node-id')(),
+	NodeId = require('../lib/node-id'),
 	co = require('co')
 
-const HOST = 't.ofr.me:8089',
+const HOST = 't.ofr.me:8088',
 	BOOTSTRAP = {
 		url: 'ws://' + HOST,
 		opts: { transports:['websocket'] },
@@ -15,19 +15,24 @@ global.co = co
 
 global.checkRoute = function(button, target) {
 	var id = NodeId.create(target),
-		cs = global.chords.filter(c => c.running && Object.keys(c.hub.conns).length)
+		cs = global.chords.filter(c => Object.keys(c.hub.conns).length)
 
 	button.disabled = true
 	button.innerText = 'checking route...'
-	Promise.all([
-		Promise.all(cs.map(c => co(c.node.findSuccessorId(id))))
-			.then(r => (console.info(r), r.every(v => v === r[0]))),
-		Promise.all(cs.map(c => co(c.node.findPredecessorId(id))))
-			.then(r => (console.info(r), r.every(v => v === r[0]))),
-	])
-		.then(r => button.innerText = r[0] && r[1] ? 'check route (ok)' : 'check route (not ok)')
-		.then(_ => button.disabled = false)
-		.catch(_ => button.disabled = false)
+	co(function *() {
+		try {
+			var successorIds = yield cs.map(c => c.node.findSuccessorId(id)),
+				predecessorIds = yield cs.map(c => c.node.findPredecessorId(id)),
+				isOK = successorIds.every(id => id === successorIds[0]) &&
+					predecessorIds.every(id => id === predecessorIds[0])
+			button.innerText = 'check route ' + (isOK ? '(ok)' : '(not ok)')
+			button.disabled = false
+		}
+		catch (err) {
+			console.error(err)
+			button.disabled = false
+		}
+	})
 }
 
 global.addChord = function(button, id) {

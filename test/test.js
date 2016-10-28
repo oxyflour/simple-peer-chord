@@ -2,7 +2,7 @@ var tape = require('tape'),
 	co = require('co'),
 	wrtc = require('electron-webrtc')({ headless: true }),
 	Chord = require('../lib/chord'),
-	NodeId = require('../lib/node-id')()
+	NodeId = require('../lib/node-id')
 
 var chords = [ ],
 	interval = 3000,
@@ -11,10 +11,6 @@ var chords = [ ],
 			wrtc,
 		},
 	}
-
-wrtc.on('error', err => {
-	console.error(err)
-})
 
 Array.prototype.hasSameElements = function() {
 	return this.every(item => item === this[0])
